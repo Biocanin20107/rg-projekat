@@ -59,7 +59,7 @@ unsigned int loadTexture(char const * path, bool gammaCorrection)
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
-    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(false);
     unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
     if (data)
     {
@@ -100,31 +100,32 @@ unsigned int loadTexture(char const * path, bool gammaCorrection)
     return textureID;
 }
 
-glm::vec3 offset = glm::vec3(0.0, 0.0, 4.0);
-
 struct ProgramState {
 
     glm::vec3 clearColor = glm::vec3(0);
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 bubnjeviPosition = glm::vec3(1.0, 8.0, -8.0);
+    glm::vec3 bubnjeviPosition = glm::vec3(9.0, 8.2, -1.0);
     float bubnjeviScale = 0.1f;
 
-    glm::vec3 zvucnikPosition = glm::vec3(-12.0, 0.260, -14.0);
+    glm::vec3 zvucnikPosition = glm::vec3(-6.0, 0.260, -5.0);
     float zvucnikScale = 0.2f;
 
-    glm::vec3 stoPosition = glm::vec3(-1.0, 0.20, 5.0);
+    glm::vec3 stoPosition = glm::vec3(-1.0, 0.28, 5.0);
     float stoScale = 0.009f;
 
-    glm::vec3 gramofonPosition = glm::vec3(-1.40, 2.870, 20.0);
+    glm::vec3 gramofonPosition = glm::vec3(-1.170, 2.870, 5.0);
     float gramofonScale = 0.080f;
 
-    glm::vec3 bubanjRotation = glm::vec3(-285.0, 784.0, 713.0);
+    glm::vec3 bubanjRotation = glm::vec3(-296.0, 729.0, 726.0);
     float bubanjAngle = 148.45f;
 
     glm::vec3 stoRotation = glm::vec3(-272.0, 55.0, 54.0);
     float stoAngle = 92.2f;
+
+    glm::vec3 prozorPosition = glm::vec3(-5.0, 5.0, -27.0);
+    float prozorScale = 8.1f;
 
     PointLight pointLight;
     ProgramState()
@@ -230,10 +231,7 @@ int main() {
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
-
-    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/CD141.JPG").c_str(), true);
-    ourShader.use();
-    ourShader.setInt("texture1", 0);
+    Shader shader("resources/shaders/3.1.blending.vs", "resources/shaders/3.1.blending.fs");
 
     // load models
     // -----------
@@ -251,25 +249,35 @@ int main() {
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(-12.0f, 8.0, -18.0);
-    pointLight.ambient = glm::vec3(0.8, 0.8, 0.8);
-    pointLight.diffuse = glm::vec3(0.01, 0.01, 0.01);
-    pointLight.specular = glm::vec3(1, 1, 1);
+    pointLight.ambient = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.diffuse = glm::vec3(0.5, 0.5, 0.5);
+    pointLight.specular = glm::vec3(0.0, 0.0, 0.0);
 
     pointLight.constant = 1.0f;
-    pointLight.linear = 0.09f;
-    pointLight.quadratic = 0.032f;
+    pointLight.linear = 0.6f;
+    pointLight.quadratic = 0.0f;
 
 
 
     float planeVertices[] = {
             // positions            // normals         // texcoords
-            200.0f, -32.5f,  200.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-            -200.0f, -32.5f,  200.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
-            -200.0f, -32.5f, -200.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+            400.0f, -32.5f,  400.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -400.0f, -32.5f,  400.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            -400.0f, -32.5f, -400.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
 
-            200.0f, -32.5f,  200.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
-            -200.0f, -32.5f, -200.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
-            200.0f, -32.5f, -200.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+            400.0f, -32.5f,  400.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -400.0f, -32.5f, -400.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+            400.0f, -32.5f, -400.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+    };
+    float transparentVertices[] = {
+            // positions
+            0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+            0.0f, 0.0f,  0.0f,  0.0f,  1.0f,
+            1.0f, 0.0f,  0.0f,  1.0f,  1.0f,
+
+            0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+            1.0f, 0.0f,  0.0f,  1.0f,  1.0f,
+            1.0f,  1.0f,  0.0f,  1.0f,  0.0f
     };
     // plane VAO
     unsigned int planeVAO, planeVBO;
@@ -286,8 +294,27 @@ int main() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
     glBindVertexArray(0);
 
+    // transparent VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/CD141.JPG").c_str(), true);
+    unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/prozorce.png").c_str(), true);
+
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    ourShader.use();
+    ourShader.setInt("texture1", 0);
 
     // render loop
     // -----------
@@ -329,7 +356,7 @@ int main() {
         // BUBANJ
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
-                               programState->bubnjeviPosition + offset); // translate it down so it's at the center of the scene
+                               programState->bubnjeviPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->bubnjeviScale));    // it's a bit too big for our scene, so scale it down
         model = glm::rotate(model, glm::radians(programState->bubanjAngle), programState->bubanjRotation);
         ourShader.setMat4("model", model);
@@ -338,7 +365,7 @@ int main() {
         // ZVUCNIK
         model = glm::mat4(1.0f);
         model = glm::translate(model,
-                               programState->zvucnikPosition + offset); // translate it down so it's at the center of the scene
+                               programState->zvucnikPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->zvucnikScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         zvucnikModel.Draw(ourShader);
@@ -346,7 +373,7 @@ int main() {
         // STO
         model = glm::mat4(1.0f);
         model = glm::translate(model,
-                               programState->stoPosition + offset); // translate it down so it's at the center of the scene
+                               programState->stoPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->stoScale));    // it's a bit too big for our scene, so scale it down
         model = glm::rotate(model, glm::radians(programState->stoAngle), programState->stoRotation);
         ourShader.setMat4("model", model);
@@ -355,7 +382,7 @@ int main() {
         // GRAMOFON
         model = glm::mat4(1.0f);
         model = glm::translate(model,
-                               programState->gramofonPosition + offset); // translate it down so it's at the center of the scene
+                               programState->gramofonPosition); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(programState->gramofonScale));    // it's a bit too big for our scene, so scale it down
         ourShader.setMat4("model", model);
         gramofonModel.Draw(ourShader);
@@ -364,6 +391,18 @@ int main() {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        shader.use();
+        shader.setMat4("projection", projection);
+        shader.setMat4("view", view);
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, transparentTexture);
+        model = glm::mat4(1.0f);
+        model = glm::translate(model, programState->prozorPosition);
+        model = glm::scale(model, glm::vec3(programState->prozorScale));
+        shader.setMat4("model", model);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -460,8 +499,10 @@ void DrawImGui(ProgramState *programState) {
         static float f = 0.0f;
         ImGui::Begin("Hello window");
         ImGui::Text("Hello text");
-        ImGui::DragFloat3("offset", (float *) &offset);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
+
+        ImGui::DragFloat3("Prozor position", (float*)&programState->prozorPosition);
+        ImGui::DragFloat("Prozor scale", (float*)&programState->prozorScale);
 
         ImGui::DragFloat3("Bubnjevi position", (float*)&programState->bubnjeviPosition);
         ImGui::DragFloat("Bubnjevi scale", &programState->bubnjeviScale, 0.05, 0.1, 4.0);
