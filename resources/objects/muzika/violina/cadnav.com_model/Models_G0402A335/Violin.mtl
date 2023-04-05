@@ -1,0 +1,88 @@
+# 3ds Max Wavefront OBJ Exporter v0.94b - (c)2007 guruware
+# File Created: www.cadnav.com
+
+newmtl wood
+	Ns 70.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 1.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.9922 0.9804 0.8941
+	Ks 0.6300 0.6300 0.6300
+	Ke 0.0000 0.0000 0.0000
+	map_Ka Tile 30s.jpg
+	map_Kd Tile 30s.jpg
+
+newmtl niz
+	Ns 77.6393
+	Ni 1.5000
+	d 1.0000
+	Tr 1.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.5000 0.5000 0.5000
+	Ks 0.0476 0.0476 0.0476
+	Ke 0.0000 0.0000 0.0000
+	map_Ka back.jpg
+	map_Kd back.jpg
+
+newmtl bok
+	Ns 77.6393
+	Ni 1.5000
+	d 1.0000
+	Tr 1.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.5000 0.5000 0.5000
+	Ks 0.0343 0.0343 0.0343
+	Ke 0.0000 0.0000 0.0000
+	map_Ka oakply2.jpg
+	map_Kd oakply2.jpg
+
+newmtl verh
+	Ns 77.6393
+	Ni 1.5000
+	d 1.0000
+	Tr 1.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.5000 0.5000 0.5000
+	Ks 0.0343 0.0343 0.0343
+	Ke 0.0000 0.0000 0.0000
+	map_Ka front.jpg
+	map_Kd front.jpg
+
+newmtl standart_metal
+	Ns 43.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 1.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.7373 0.6941 0.9098
+	Ks 0.6660 0.6660 0.6660
+	Ke 0.0000 0.0000 0.0000
+	map_Ka saif met.jpg
+	map_Kd saif met.jpg
+	map_bump -bm 0.3000 saif met.jpg
+	bump -bm 0.3000 saif met.jpg
+
+newmtl blue
+	Ns 10.0000
+	Ni 1.5000
+	d 1.0000
+	Tr 1.0000
+	Tf 1.0000 1.0000 1.0000 
+	illum 2
+	Ka 0.0000 0.0000 0.0000
+	Kd 0.6627 0.8431 0.9686
+	Ks 0.0000 0.0000 0.0000
+	Ke 0.0000 0.0000 0.0000
+	map_Ka oakply1.jpg
+	map_Kd oakply1.jpg

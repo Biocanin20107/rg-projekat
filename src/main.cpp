@@ -26,6 +26,8 @@ void processInput(GLFWwindow *window);
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods);
 
+unsigned int loadTexture(char const * path, bool gammaCorrection);
+
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -51,13 +53,79 @@ struct PointLight {
     float quadratic;
 };
 
+unsigned int loadTexture(char const * path, bool gammaCorrection)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    stbi_set_flip_vertically_on_load(true);
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data)
+    {
+        GLenum internalFormat;
+        GLenum dataFormat;
+        if (nrComponents == 1)
+        {
+            internalFormat = dataFormat = GL_RED;
+        }
+        else if (nrComponents == 3)
+        {
+            internalFormat = gammaCorrection ? GL_SRGB : GL_RGB;
+            dataFormat = GL_RGB;
+        }
+        else if (nrComponents == 4)
+        {
+            internalFormat = gammaCorrection ? GL_SRGB_ALPHA : GL_RGBA;
+            dataFormat = GL_RGBA;
+        }
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
+
+glm::vec3 offset = glm::vec3(0.0, 0.0, 4.0);
+
 struct ProgramState {
+
     glm::vec3 clearColor = glm::vec3(0);
     bool ImGuiEnabled = false;
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.0f;
+    glm::vec3 bubnjeviPosition = glm::vec3(1.0, 8.0, -8.0);
+    float bubnjeviScale = 0.1f;
+
+    glm::vec3 zvucnikPosition = glm::vec3(-12.0, 0.260, -14.0);
+    float zvucnikScale = 0.2f;
+
+    glm::vec3 stoPosition = glm::vec3(-1.0, 0.20, 5.0);
+    float stoScale = 0.009f;
+
+    glm::vec3 gramofonPosition = glm::vec3(-1.40, 2.870, 20.0);
+    float gramofonScale = 0.080f;
+
+    glm::vec3 bubanjRotation = glm::vec3(-285.0, 784.0, 713.0);
+    float bubanjAngle = 148.45f;
+
+    glm::vec3 stoRotation = glm::vec3(-272.0, 55.0, 54.0);
+    float stoAngle = 92.2f;
+
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 3.0f)) {}
@@ -65,6 +133,8 @@ struct ProgramState {
     void SaveToFile(std::string filename);
 
     void LoadFromFile(std::string filename);
+
+    glm::vec3 probaRotation = glm::vec3(0.0f);
 };
 
 void ProgramState::SaveToFile(std::string filename) {
@@ -150,8 +220,6 @@ int main() {
     ImGuiIO &io = ImGui::GetIO();
     (void) io;
 
-
-
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
@@ -163,22 +231,60 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
 
+    unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/CD141.JPG").c_str(), true);
+    ourShader.use();
+    ourShader.setInt("texture1", 0);
+
     // load models
     // -----------
-    Model ourModel("resources/objects/backpack/backpack.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+    Model bubanjModel("resources/objects/bubnjevi/cadnav.com_model/ModelsBubanj/KettleDrum.obj");
+    bubanjModel.SetShaderTextureNamePrefix("material.");
+
+    Model zvucnikModel("resources/objects/muzika/zvucnjal/cadnav.com_model/Models_G0701A001/speaker.obj");
+    zvucnikModel.SetShaderTextureNamePrefix("material.");
+
+    Model stoModel("resources/objects/muzika/sto/cadnav.com_model/Models_G0402A298/table.obj");
+    stoModel.SetShaderTextureNamePrefix("material.");
+
+    Model gramofonModel("resources/objects/muzika/gramofon/cadnav.com_model/Models_G0402A410/gramophone.obj");
+    gramofonModel.SetShaderTextureNamePrefix("material.");
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(1, 1, 1);
-    pointLight.diffuse = glm::vec3(2, 2, 2);
-    pointLight.specular = glm::vec3(5, 5, 5);
+    pointLight.position = glm::vec3(-12.0f, 8.0, -18.0);
+    pointLight.ambient = glm::vec3(0.8, 0.8, 0.8);
+    pointLight.diffuse = glm::vec3(0.01, 0.01, 0.01);
+    pointLight.specular = glm::vec3(1, 1, 1);
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
 
+
+    float planeVertices[] = {
+            // positions            // normals         // texcoords
+            200.0f, -32.5f,  200.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -200.0f, -32.5f,  200.0f,  0.0f, 1.0f, 0.0f,   0.0f,  0.0f,
+            -200.0f, -32.5f, -200.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+
+            200.0f, -32.5f,  200.0f,  0.0f, 1.0f, 0.0f,  10.0f,  0.0f,
+            -200.0f, -32.5f, -200.0f,  0.0f, 1.0f, 0.0f,   0.0f, 10.0f,
+            200.0f, -32.5f, -200.0f,  0.0f, 1.0f, 0.0f,  10.0f, 10.0f
+    };
+    // plane VAO
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+    glBindVertexArray(planeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(planeVertices), planeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glBindVertexArray(0);
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -195,7 +301,6 @@ int main() {
         // input
         // -----
         processInput(window);
-
 
         // render
         // ------
@@ -221,13 +326,44 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
-        // render the loaded model
+        // BUBANJ
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model,
-                               programState->backpackPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->backpackScale));    // it's a bit too big for our scene, so scale it down
+                               programState->bubnjeviPosition + offset); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(programState->bubnjeviScale));    // it's a bit too big for our scene, so scale it down
+        model = glm::rotate(model, glm::radians(programState->bubanjAngle), programState->bubanjRotation);
         ourShader.setMat4("model", model);
-        ourModel.Draw(ourShader);
+        bubanjModel.Draw(ourShader);
+
+        // ZVUCNIK
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->zvucnikPosition + offset); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(programState->zvucnikScale));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        zvucnikModel.Draw(ourShader);
+
+        // STO
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->stoPosition + offset); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(programState->stoScale));    // it's a bit too big for our scene, so scale it down
+        model = glm::rotate(model, glm::radians(programState->stoAngle), programState->stoRotation);
+        ourShader.setMat4("model", model);
+        stoModel.Draw(ourShader);
+
+        // GRAMOFON
+        model = glm::mat4(1.0f);
+        model = glm::translate(model,
+                               programState->gramofonPosition + offset); // translate it down so it's at the center of the scene
+        model = glm::scale(model, glm::vec3(programState->gramofonScale));    // it's a bit too big for our scene, so scale it down
+        ourShader.setMat4("model", model);
+        gramofonModel.Draw(ourShader);
+
+        glBindVertexArray(planeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, floorTexture);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -265,6 +401,20 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(RIGHT, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
+    programState->camera.ProcessKeyboard(UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
+        programState->camera.ProcessKeyboard(DOWN, deltaTime);
+
+    if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+        programState->camera.ProcessKeyboard(CAMERA_UP, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+        programState->camera.ProcessKeyboard(CAMERA_DOWN, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
+        programState->camera.ProcessKeyboard(CAMERA_RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
+        programState->camera.ProcessKeyboard(CAMERA_LEFT, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -310,10 +460,24 @@ void DrawImGui(ProgramState *programState) {
         static float f = 0.0f;
         ImGui::Begin("Hello window");
         ImGui::Text("Hello text");
-        ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
+        ImGui::DragFloat3("offset", (float *) &offset);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
+
+        ImGui::DragFloat3("Bubnjevi position", (float*)&programState->bubnjeviPosition);
+        ImGui::DragFloat("Bubnjevi scale", &programState->bubnjeviScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat3("Bubnjevi rotation", (float*)&programState->bubanjRotation);
+        ImGui::DragFloat("Bubnjevi angle", &programState->bubanjAngle, 0.05, 0.1, 200.0);
+
+        ImGui::DragFloat3("Zvucnik position", (float*)&programState->zvucnikPosition);
+        ImGui::DragFloat("Zvucnik scale", &programState->zvucnikScale, 0.05, 0.1, 4.0);
+
+        ImGui::DragFloat3("Sto position", (float*)&programState->stoPosition);
+        ImGui::DragFloat("Sto scale", &programState->stoScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat3("Sto rotation", (float*)&programState->stoRotation);
+        ImGui::DragFloat("Sto angle", &programState->stoAngle, 0.05, 0.1, 200.0);
+
+        ImGui::DragFloat3("Gramofon position", (float*)&programState->gramofonPosition);
+        ImGui::DragFloat("Gramofon scale", &programState->gramofonScale, 0.05, 0.1, 4.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
@@ -345,4 +509,9 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
+    if (key == GLFW_KEY_P && action == GLFW_PRESS){
+        programState->CameraMouseMovementUpdateEnabled = !programState->CameraMouseMovementUpdateEnabled;
+    }
 }
+
+
