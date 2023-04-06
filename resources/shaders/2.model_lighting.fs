@@ -27,6 +27,7 @@ uniform PointLight pointLight;
 uniform Material material;
 
 uniform vec3 viewPosition;
+uniform bool blinn;
 // calculates the color when using a point light.
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 {
@@ -35,7 +36,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
     vec3 reflectDir = reflect(-lightDir, normal);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+//     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
+    float spec = 0.0;
+    if (blinn) {
+          vec3 halfwayDir = normalize(lightDir + viewDir);
+          spec = pow(max(dot(normal, halfwayDir), 0.0), 32.0);
+        }
+    else {
+        vec3 reflectDir = reflect(-lightDir, normal);
+        spec = pow(max(dot(viewDir, reflectDir), 0.0), 8.0);
+    }
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 7.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));

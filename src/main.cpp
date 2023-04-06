@@ -31,6 +31,7 @@ unsigned int loadTexture(char const * path, bool gammaCorrection);
 // settings
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
+bool blinn = true;
 
 // camera
 
@@ -251,7 +252,7 @@ int main() {
     pointLight.position = glm::vec3(-12.0f, 8.0, -18.0);
     pointLight.ambient = glm::vec3(0.6, 0.6, 0.6);
     pointLight.diffuse = glm::vec3(0.5, 0.5, 0.5);
-    pointLight.specular = glm::vec3(0.0, 0.0, 0.0);
+    pointLight.specular = glm::vec3(1, 1, 1);
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.6f;
@@ -352,6 +353,7 @@ int main() {
         glm::mat4 view = programState->camera.GetViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
+        ourShader.setInt("blinn", blinn);
 
         // BUBANJ
         glm::mat4 model = glm::mat4(1.0f);
@@ -387,10 +389,15 @@ int main() {
         ourShader.setMat4("model", model);
         gramofonModel.Draw(ourShader);
 
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_FRONT);
+
         glBindVertexArray(planeVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, floorTexture);
         glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        glCullFace(GL_BACK);
 
         shader.use();
         shader.setMat4("projection", projection);
@@ -403,6 +410,7 @@ int main() {
         shader.setMat4("model", model);
         glDrawArrays(GL_TRIANGLES, 0, 6);
 
+        glDisable(GL_CULL_FACE);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -552,6 +560,9 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_P && action == GLFW_PRESS){
         programState->CameraMouseMovementUpdateEnabled = !programState->CameraMouseMovementUpdateEnabled;
+    }
+    if (key == GLFW_KEY_B && action == GLFW_PRESS){
+        blinn = !blinn;
     }
 }
 
