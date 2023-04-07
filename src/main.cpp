@@ -33,6 +33,9 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 bool blinn = true;
 bool screen = false;
+bool hdrKeyPressed = false;
+bool hdr = true;
+float exposure = 1.0f;
 
 // camera
 
@@ -236,7 +239,7 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader shader("resources/shaders/3.1.blending.vs", "resources/shaders/3.1.blending.fs");
-    Shader screenShader("resources/shaders/5.1.framebuffers_screen.vs", "resources/shaders/5.2.framebuffers_screen.fs");
+    Shader hdrShader("resources/shaders/5.1.framebuffers_screen.vs", "resources/shaders/5.2.framebuffers_screen.fs");
 
     // load models
     // -----------
@@ -335,39 +338,33 @@ int main() {
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-    ourShader.use();
-    ourShader.setInt("texture1", 0);
-
-    screenShader.use();
-    screenShader.setInt("screenTexture", 0);
-
-    unsigned int fbo;
-    glGenFramebuffers(1, &fbo);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
-    unsigned int textureColorbuffer;
-    glGenTextures(1, &textureColorbuffer);
-    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-
+    unsigned int hdrFBO;
+    glGenFramebuffers(1, &hdrFBO);
+    // create floating point color buffer
+    unsigned int colorBuffer;
+    glGenTextures(1, &colorBuffer);
+    glBindTexture(GL_TEXTURE_2D, colorBuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, SCR_WIDTH, SCR_HEIGHT, 0, GL_RGBA, GL_FLOAT, NULL);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
-
-    unsigned int rbo;
-    glGenRenderbuffers(1, &rbo);
-    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
-
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, SCR_WIDTH, SCR_HEIGHT);
-    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE){
-        std::cout << "Yey";
-    }
+    // create depth buffer (renderbuffer)
+    unsigned int rboDepth;
+    glGenRenderbuffers(1, &rboDepth);
+    glBindRenderbuffer(GL_RENDERBUFFER, rboDepth);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, SCR_WIDTH, SCR_HEIGHT);
+    // attach buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorBuffer, 0);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rboDepth);
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "Framebuffer not complete!" << std::endl;
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    shader.use();
+    shader.setInt("diffuseTexture", 0);
+
+    hdrShader.use();
+    hdrShader.setInt("hdrBuffer", 0);
 
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
@@ -382,8 +379,8 @@ int main() {
         // input
         processInput(window);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-        glEnable(GL_DEPTH_TEST);
+        glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
+//        glEnable(GL_DEPTH_TEST);
 
         // render
         // ------
@@ -391,100 +388,98 @@ int main() {
         //glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // don't forget to enable shader before setting uniforms
-        ourShader.use();
-        pointLight.position = glm::vec3(-7.7, 10.0f, 16.8);
-        ourShader.setVec3("pointLight.position", pointLight.position);
-        ourShader.setVec3("pointLight.ambient", pointLight.ambient);
-        ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
-        ourShader.setVec3("pointLight.specular", pointLight.specular);
-        ourShader.setFloat("pointLight.constant", pointLight.constant);
-        ourShader.setFloat("pointLight.linear", pointLight.linear);
-        ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
-        ourShader.setVec3("viewPosition", programState->camera.Position);
-        ourShader.setFloat("material.shininess", 32.0f);
-        // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
-                                                (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = programState->camera.GetViewMatrix();
-        ourShader.setMat4("projection", projection);
-        ourShader.setMat4("view", view);
-        ourShader.setInt("blinn", blinn);
+            // don't forget to enable shader before setting uniforms
+            ourShader.use();
+            pointLight.position = glm::vec3(-7.7, 10.0f, 16.8);
+            ourShader.setVec3("pointLight.position", pointLight.position);
+            ourShader.setVec3("pointLight.ambient", pointLight.ambient);
+            ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
+            ourShader.setVec3("pointLight.specular", pointLight.specular);
+            ourShader.setFloat("pointLight.constant", pointLight.constant);
+            ourShader.setFloat("pointLight.linear", pointLight.linear);
+            ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
+            ourShader.setVec3("viewPosition", programState->camera.Position);
+            ourShader.setFloat("material.shininess", 8.0f);
+            // view/projection transformations
+            glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
+                                                    (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
+            glm::mat4 view = programState->camera.GetViewMatrix();
+            ourShader.setMat4("projection", projection);
+            ourShader.setMat4("view", view);
+            ourShader.setInt("blinn", blinn);
 
-        // BUBANJ
-        glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->bubnjeviPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->bubnjeviScale));    // it's a bit too big for our scene, so scale it down
-        model = glm::rotate(model, glm::radians(programState->bubanjAngle), programState->bubanjRotation);
-        ourShader.setMat4("model", model);
-        bubanjModel.Draw(ourShader);
+            // BUBANJ
+            glm::mat4 model = glm::mat4(1.0f);
+            model = glm::translate(model,
+                                   programState->bubnjeviPosition); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(programState->bubnjeviScale));    // it's a bit too big for our scene, so scale it down
+            model = glm::rotate(model, glm::radians(programState->bubanjAngle), programState->bubanjRotation);
+            ourShader.setMat4("model", model);
+            bubanjModel.Draw(ourShader);
 
-        // ZVUCNIK
-        model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->zvucnikPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->zvucnikScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        zvucnikModel.Draw(ourShader);
+            // ZVUCNIK
+            model = glm::mat4(1.0f);
+            model = glm::translate(model,
+                                   programState->zvucnikPosition); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(programState->zvucnikScale));    // it's a bit too big for our scene, so scale it down
+            ourShader.setMat4("model", model);
+            zvucnikModel.Draw(ourShader);
 
-        // STO
-        model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->stoPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->stoScale));    // it's a bit too big for our scene, so scale it down
-        model = glm::rotate(model, glm::radians(programState->stoAngle), programState->stoRotation);
-        ourShader.setMat4("model", model);
-        stoModel.Draw(ourShader);
+            // STO
+            model = glm::mat4(1.0f);
+            model = glm::translate(model,
+                                   programState->stoPosition); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(programState->stoScale));    // it's a bit too big for our scene, so scale it down
+            model = glm::rotate(model, glm::radians(programState->stoAngle), programState->stoRotation);
+            ourShader.setMat4("model", model);
+            stoModel.Draw(ourShader);
 
-        // GRAMOFON
-        model = glm::mat4(1.0f);
-        model = glm::translate(model,
-                               programState->gramofonPosition); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(programState->gramofonScale));    // it's a bit too big for our scene, so scale it down
-        ourShader.setMat4("model", model);
-        gramofonModel.Draw(ourShader);
+            // GRAMOFON
+            model = glm::mat4(1.0f);
+            model = glm::translate(model,
+                                   programState->gramofonPosition); // translate it down so it's at the center of the scene
+            model = glm::scale(model, glm::vec3(programState->gramofonScale));    // it's a bit too big for our scene, so scale it down
+            ourShader.setMat4("model", model);
+            gramofonModel.Draw(ourShader);
 
-        glEnable(GL_CULL_FACE);
-        glCullFace(GL_FRONT);
+            glEnable(GL_CULL_FACE);
+            glCullFace(GL_FRONT);
 
-        glBindVertexArray(planeVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, floorTexture);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+            glBindVertexArray(planeVAO);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, floorTexture);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        glCullFace(GL_BACK);
+            glCullFace(GL_BACK);
 
-        shader.use();
-        shader.setMat4("projection", projection);
-        shader.setMat4("view", view);
-        shader.setInt("screen", screen);
-        glBindVertexArray(transparentVAO);
-        glBindTexture(GL_TEXTURE_2D, transparentTexture);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, programState->prozorPosition);
-        model = glm::scale(model, glm::vec3(programState->prozorScale));
-        shader.setMat4("model", model);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+            shader.use();
+            shader.setMat4("projection", projection);
+            shader.setMat4("view", view);
+            shader.setInt("screen", screen);
+            glBindVertexArray(transparentVAO);
+            glBindTexture(GL_TEXTURE_2D, transparentTexture);
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, programState->prozorPosition);
+            model = glm::scale(model, glm::vec3(programState->prozorScale));
+            shader.setMat4("model", model);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
 
-        glDisable(GL_CULL_FACE);
+            glDisable(GL_CULL_FACE);
 
-        if (programState->ImGuiEnabled)
-            DrawImGui(programState);
+            if (programState->ImGuiEnabled)
+                DrawImGui(programState);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        screenShader.use();
+        hdrShader.use();
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+        glBindTexture(GL_TEXTURE_2D, colorBuffer);
 
-        glDisable(GL_DEPTH_TEST);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f); // set clear color to white (not really necessary actually, since we won't be able to see behind the quad anyways)
-        glClear(GL_COLOR_BUFFER_BIT);
-
-        screenShader.use();
+        hdrShader.setInt("hdr", hdr);
+        hdrShader.setFloat("exposure", exposure);
         renderQuad();
 
+        std::cout << "hdr: " << (hdr ? "on" : "off") << "| exposure: " << exposure << std::endl;
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
@@ -631,6 +626,27 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_B && action == GLFW_PRESS){
         blinn = !blinn;
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS && !hdrKeyPressed)
+    {
+        hdr = !hdr;
+        hdrKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_RELEASE)
+    {
+        hdrKeyPressed = false;
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    {
+        if (exposure > 0.0f)
+            exposure -= 0.05f;
+        else
+            exposure = 0.0f;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+    {
+        exposure += 0.05f;
     }
 }
 
