@@ -118,7 +118,7 @@ struct ProgramState {
     float zvucnikScale = 0.2f;
 
     glm::vec3 stoPosition = glm::vec3(-1.0, 0.28, 5.0);
-    float stoScale = 0.009f;
+    float stoScale = 0.0089f;
 
     glm::vec3 gramofonPosition = glm::vec3(-1.170, 2.870, 5.0);
     float gramofonScale = 0.080f;
@@ -237,16 +237,16 @@ int main() {
 
     // build and compile shaders
     // -------------------------
-    Shader ourShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
-    Shader shader("resources/shaders/3.1.blending.vs", "resources/shaders/3.1.blending.fs");
-    Shader hdrShader("resources/shaders/5.1.framebuffers_screen.vs", "resources/shaders/5.2.framebuffers_screen.fs");
+    Shader ourShader("resources/shaders/lighting.vs", "resources/shaders/lighting.fs");
+    Shader shader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
+    Shader hdrShader("resources/shaders/hdr.vs", "resources/shaders/hdr.fs");
 
     // load models
     // -----------
     Model bubanjModel("resources/objects/bubnjevi/cadnav.com_model/ModelsBubanj/KettleDrum.obj");
     bubanjModel.SetShaderTextureNamePrefix("material.");
 
-    Model zvucnikModel("resources/objects/muzika/zvucnjal/cadnav.com_model/Models_G0701A001/speaker.obj");
+    Model zvucnikModel("resources/objects/muzika/zvucnjak/cadnav.com_model/Models_G0701A001/speaker.obj");
     zvucnikModel.SetShaderTextureNamePrefix("material.");
 
     Model stoModel("resources/objects/muzika/sto/cadnav.com_model/Models_G0402A298/table.obj");
@@ -257,9 +257,9 @@ int main() {
 
     PointLight& pointLight = programState->pointLight;
     pointLight.position = glm::vec3(-12.0f, 8.0, -18.0);
-    pointLight.ambient = glm::vec3(0.6, 0.6, 0.6);
-    pointLight.diffuse = glm::vec3(0.5, 0.5, 0.5);
-    pointLight.specular = glm::vec3(1, 1, 1);
+    pointLight.ambient = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.diffuse = glm::vec3(1.0, 1.0, 1.0);
+    pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
     pointLight.constant = 1.0f;
     pointLight.linear = 0.6f;
@@ -287,12 +287,7 @@ int main() {
             1.0f, 0.0f,  0.0f,  1.0f,  1.0f,
             1.0f,  1.0f,  0.0f,  1.0f,  0.0f
     };
-//    float quadVertices[] = {
-//            -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
-//            -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-//            1.0f,  1.0f, 0.0f, 1.0f, 1.0f,
-//            1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-//    };
+
     // plane VAO
     unsigned int planeVAO, planeVBO;
     glGenVertexArrays(1, &planeVAO);
@@ -320,17 +315,6 @@ int main() {
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
-
-//    unsigned int quadVAO, quadVBO;
-//    glGenVertexArrays(1, &quadVAO);
-//    glGenBuffers(1, &quadVBO);
-//    glBindVertexArray(quadVAO);
-//    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
-//    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
-//    glEnableVertexAttribArray(0);
-//    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
-//    glEnableVertexAttribArray(1);
-//    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
 
     unsigned int floorTexture = loadTexture(FileSystem::getPath("resources/textures/CD141.JPG").c_str(), true);
     unsigned int transparentTexture = loadTexture(FileSystem::getPath("resources/textures/prozorce.png").c_str(), true);
@@ -380,12 +364,10 @@ int main() {
         processInput(window);
 
         glBindFramebuffer(GL_FRAMEBUFFER, hdrFBO);
-//        glEnable(GL_DEPTH_TEST);
 
         // render
         // ------
         glClearColor(programState->clearColor.r, programState->clearColor.g, programState->clearColor.b, 1.0f);
-        //glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
             // don't forget to enable shader before setting uniforms
@@ -399,7 +381,7 @@ int main() {
             ourShader.setFloat("pointLight.linear", pointLight.linear);
             ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
             ourShader.setVec3("viewPosition", programState->camera.Position);
-            ourShader.setFloat("material.shininess", 8.0f);
+            ourShader.setFloat("material.shininess", 32.0f);
             // view/projection transformations
             glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                     (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
@@ -435,6 +417,7 @@ int main() {
             stoModel.Draw(ourShader);
 
             // GRAMOFON
+
             model = glm::mat4(1.0f);
             model = glm::translate(model,
                                    programState->gramofonPosition); // translate it down so it's at the center of the scene
@@ -493,6 +476,13 @@ int main() {
     ImGui::DestroyContext();
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
+
+    glDeleteVertexArrays(1, &planeVAO);
+    glDeleteBuffers(1, &planeVBO);
+
+    glDeleteVertexArrays(1, &transparentVAO);
+    glDeleteBuffers(1, &transparentVBO);
+
     glfwTerminate();
     return 0;
 }
@@ -521,10 +511,6 @@ void processInput(GLFWwindow *window) {
         programState->camera.ProcessKeyboard(CAMERA_UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         programState->camera.ProcessKeyboard(CAMERA_DOWN, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
-        programState->camera.ProcessKeyboard(CAMERA_RIGHT, deltaTime);
-    if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
-        programState->camera.ProcessKeyboard(CAMERA_LEFT, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
