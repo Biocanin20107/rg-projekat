@@ -1,4 +1,4 @@
-# youtube video
+# Youtube video
 https://youtu.be/QZtfLhhPtc4
 
 # Dodatne informacije
